@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Landmark recognition</string>
+    <string name="location">Location</string>
+    <string name="latitude">Latitude</string>
+    <string name="longitude">Longitude</string>
+    <string name="accuracy">Accuracy</string>
+</resources>
