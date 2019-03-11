@@ -16,9 +16,11 @@
 package app.harshit.landmark
 
 import android.Manifest
+import android.content.Context
 import android.content.pm.PackageManager
 import android.media.Image
 import android.media.ImageReader
+import android.net.ConnectivityManager
 import android.os.Bundle
 import android.os.Handler
 import android.os.HandlerThread
@@ -28,6 +30,7 @@ import android.util.Log
 import android.view.KeyEvent
 import android.view.Surface
 import android.view.View
+import android.view.View.GONE
 import android.widget.Toast
 import app.harshit.emotiondetection.R
 import com.google.android.things.contrib.driver.button.ButtonInputDriver
@@ -43,11 +46,6 @@ import java.math.RoundingMode
 import java.text.DecimalFormat
 import kotlin.math.roundToInt
 
-/**
- * Doorbell activity that capture a picture from an Android Things
- * camera on a button press and post it to Firebase and Google Cloud
- * Vision API.
- */
 class MainActivity : AppCompatActivity() {
 
     var isDetecting = false
@@ -70,22 +68,10 @@ class MainActivity : AppCompatActivity() {
     private var mCameraThread: HandlerThread? = null
 
     /**
-     * A [Handler] for running Cloud tasks in the background.
-     */
-    private var mCloudHandler: Handler? = null
-
-    /**
-     * An additional thread for running Cloud tasks that shouldn't block the UI.
-     */
-    private var mCloudThread: HandlerThread? = null
-
-    /**
      * Listener for new camera images.
      */
 
     lateinit var sheetBehavior: BottomSheetBehavior<*>
-
-    private val detectedLabels = arrayListOf<FirebaseVisionImageLabel>()
 
     public override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -107,11 +93,7 @@ class MainActivity : AppCompatActivity() {
         mCameraThread!!.start()
         mCameraHandler = Handler(mCameraThread!!.looper)
 
-        mCloudThread = HandlerThread("CloudThread")
-        mCloudThread!!.start()
-        mCloudHandler = Handler(mCloudThread!!.looper)
-
-        // Initialize the doorbell button driver
+        // Initialize the button driver
         initPIO()
 
         // Camera code is complicated, so we've shoved it all in this closet class for you.
@@ -176,7 +158,6 @@ class MainActivity : AppCompatActivity() {
         mCamera!!.shutDown()
 
         mCameraThread!!.quitSafely()
-        mCloudThread!!.quitSafely()
         try {
             mButtonInputDriver!!.close()
         } catch (e: IOException) {
@@ -191,6 +172,7 @@ class MainActivity : AppCompatActivity() {
             Log.d(TAG, "button pressed")
             if (!isDetecting) {
                 mCamera!!.takePicture()
+                tvAbout.visibility = GONE
                 sheetBehavior.state = BottomSheetBehavior.STATE_HIDDEN
                 progress.visibility = View.VISIBLE
             }
@@ -200,14 +182,19 @@ class MainActivity : AppCompatActivity() {
         return super.onKeyUp(keyCode, event)
     }
 
-    fun roundOffDecimal(number: Double): Double? {
+    private fun roundOffDecimal(number: Double): Double? {
         val df = DecimalFormat("#.##")
         df.roundingMode = RoundingMode.CEILING
         return df.format(number).toDouble()
     }
 
+    internal fun isNetwork(context: Context): Boolean {
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val activeNetworkInfo = connectivityManager.activeNetworkInfo
+        return activeNetworkInfo != null && activeNetworkInfo.isConnected
+    }
+
     companion object {
         private val TAG = "MainActivity"
     }
-
 }
